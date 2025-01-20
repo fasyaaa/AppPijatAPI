@@ -1,5 +1,5 @@
 const express = require("express");
-const app = express;
+const app = express();
 const port = 3000;
 
 const cors = require("cors");
@@ -23,5 +23,5 @@ app.use("/api/sesi", sesiRouter);
 
 
 app.listen(port, () => {
-    console.log(`Example app listening at http://localhost:${port}`);
+    console.log(`App listening at http://localhost:${port}`);
 });
