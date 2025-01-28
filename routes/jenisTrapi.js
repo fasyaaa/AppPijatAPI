@@ -67,7 +67,7 @@ router.get("/:id_jenisTrapi", (req, res) => {
     connection.query(
         "SELECT * FROM jenisTrapi WHERE id_jenisTrapi = ? ",
         [id_jenisTrapi],
-        (err, res) => {
+        (err, rows) => {
             if(err){
                 return res.status(200).json({
                     status: false,

@@ -64,14 +64,14 @@ router.post("/store",
 );
 
 // Detail data terapis
-router.get("id_terapis", (req, res) => {
+router.get("/:id_terapis", (req, res) => {
     let id_terapis = req.params.id_terapis;
     connection.query(
         "SELECT * FROM terapis WHERE id_terapis = ? ",
         id_terapis,
-        (err, res) => {
+        (err, rows) => {
             if(err){
-                return res.status(200).json({
+                return res.status(500).json({
                     status: false,
                     message: "Internal Server Error"
                 });
@@ -85,7 +85,7 @@ router.get("id_terapis", (req, res) => {
                 } else{
                     return res.status(404).json({
                         status: false,
-                        message: "terapis Not Found"
+                        message: "Terapis Not Found"
                     });
                 }  
             }
@@ -110,18 +110,27 @@ router.put(
                 message: errors.array()
             });
         }
-        let id_terapis = req.params.id_terapis;
+        const id_terapis = req.params.id_terapis;
+        if (!id_terapis) {
+            return res.status(400).json({
+                status: false,
+                message: "id_terapis is required",
+            });
+        }
+
         let formData = {
             id_terapis: req.body.id_terapis,
             nama_terapis: req.body.nama_terapis,
             spesialis: req.body.spesialis,
             no_izin_prak: req.body.no_izin_prak,
         };
+        console.log("Updating terapis:", { id_terapis, formData });
         connection.query(
             "UPDATE terapis SET ? WHERE id_terapis = ?",
             [formData, id_terapis],
             (err, rows) => {
                 if(err){
+                    console.error("Database error:", err);
                     return res.status(500).json({
                         status: false,
                         message: "Internal Server Error"
