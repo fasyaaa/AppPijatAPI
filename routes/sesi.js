@@ -47,7 +47,13 @@ router.post(
         body("id_pasien").notEmpty(),
         body("id_terapis").notEmpty(),
         body("id_jenisTrapi").notEmpty(),
-        body("tanggal_sesi").notEmpty(),
+        body("tanggal_sesi").notEmpty().custom((value) => {
+            const dateTimeRegex = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}?$/;
+            if (!dateTimeRegex.test(value.trim())) {
+                throw new Error("Format tanggal_sesi harus YYYY-MM-DD HH:MM");
+            }
+            return true;
+        }),
         body("catatan_sesi").notEmpty(),
     ],
     (req, res) => {
@@ -59,8 +65,14 @@ router.post(
             });
         }
 
-        // Validasi foreign keys sebelum menyimpan data
         const { id_pasien, id_terapis, id_jenisTrapi } = req.body;
+
+        let finalTanggalSesi = req.body.tanggal_sesi.trim();
+        if (/^\d{2}:\d{2}$/.test(finalTanggalSesi)) {
+            const today = new Date().toISOString().split("T")[0];
+            finalTanggalSesi = `${today} ${finalTanggalSesi}:00`;
+        }
+
         connection.query(
             "SELECT id_pasien FROM pasien WHERE id_pasien = ?",
             [id_pasien],
@@ -89,16 +101,17 @@ router.post(
                                     id_pasien: req.body.id_pasien,
                                     id_terapis: req.body.id_terapis,
                                     id_jenisTrapi: req.body.id_jenisTrapi,
-                                    tanggal_sesi: req.body.tanggal_sesi,
+                                    tanggal_sesi: finalTanggalSesi, // Menggunakan tanggal_sesi yang sudah diformat
                                     catatan_sesi: req.body.catatan_sesi,
                                 };
 
                                 connection.query("INSERT INTO sesi SET ?", formData, (err, rows) => {
                                     if (err) {
+                                        console.error("Database Insert Error: ", err);
                                         return res.status(500).json({
                                             status: false,
                                             message: "Internal Server Error",
-                                            errors: err,
+                                            errors: err.sqlMessage,
                                         });
                                     } else {
                                         formData.id_sesi = rows.insertId;
@@ -121,6 +134,12 @@ router.post(
 // Ambil detail sesi berdasarkan ID
 router.get("/:id_sesi", (req, res) => {
     const id_sesi = req.params.id_sesi;
+    if (!id_sesi) {
+        return res.status(400).json({
+            status: false,
+            message: "Missing id_sesi parameter",
+        });
+    }
     const query = `
         SELECT 
         sesi.id_sesi,
@@ -136,9 +155,9 @@ router.get("/:id_sesi", (req, res) => {
         INNER JOIN pasien ON sesi.id_pasien = pasien.id_pasien
         INNER JOIN terapis ON sesi.id_terapis = terapis.id_terapis
         INNER JOIN jenisTrapi ON sesi.id_jenisTrapi = jenisTrapi.id_jenisTrapi
-        ORDER BY sesi.id_sesi DESC;
+        WHERE sesi.id_sesi = ?;
     `;
-    connection.query(query, [id_sesi], (err, rows) => {
+    connection.query(query, [id_sesi],(err, rows) => {
         if (err) {
             return res.status(500).json({
                 status: false,
